@@ -12,7 +12,7 @@ variables:
   GOLANGCI_LINT_CACHE: $CI_PROJECT_DIR/.cache/golangci-lint
 
 default:
-  image: golang:1.26.5-trixie
+  image: golang:1.26.6-trixie
   interruptible: true
   cache:
     key:

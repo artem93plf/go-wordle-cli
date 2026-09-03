@@ -1,7 +1,7 @@
 // Модуль, версия Go и локальные инструменты разработки.
 module fiveletters
 
-go 1.26.5
+go 1.26.0
 
 tool github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
