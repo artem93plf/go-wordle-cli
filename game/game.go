@@ -2,15 +2,18 @@ package game
 
 import "math/rand"
 
+// StatusGame описывает статус игровой сессии.
 type StatusGame int
 
+// Возможные статусы игры: игра продолжается, победа и поражение.
 const (
 	StatusGameInProgress StatusGame = iota
 	StatusGameWin
 	StatusGameLose
 )
 
-type GameSession struct {
+// GameSession хранит состояние одной игры и допустимый словарь.
+type GameSession struct { //nolint:revive // имя задано публичным контрактом задания
 	Dictionary   []string
 	MaxAttempts  int
 	Answer       string
@@ -19,35 +22,58 @@ type GameSession struct {
 	Status       StatusGame
 }
 
-func IsRussianWord(s string) bool {
-	if s == "" {
-		return false
+// IsRussianWord проверяет, что слова содержат только русские буквы.
+func IsRussianWord(dictionary []string) bool {
+	for _, word := range dictionary {
+		for _, ch := range word {
+			if (ch < 'а' || ch > 'я') &&
+				(ch < 'А' || ch > 'Я') &&
+				ch != 'ё' && ch != 'Ё' {
+				return false
+			}
+		}
 	}
-	for _, ch := range s {
-		if (ch < 'а' || ch > 'я') &&
-			(ch < 'А' || ch > 'Я') &&
-			ch != 'ё' && ch != 'Ё' {
+	return true
+}
+
+// IsDictionary проверяет, что словарь непустой и не содержит повторов.
+func IsDictionary(dictionary []string) bool {
+	unique := make(map[string]bool)
+
+	for _, word := range dictionary {
+		if unique[word] {
+			return false
+		}
+		unique[word] = true
+	}
+
+	return len(unique) > 0
+}
+
+// IsFiveLetterWord проверяет, что каждое слово содержит ровно пять рун.
+func IsFiveLetterWord(dictionary []string) bool {
+	for _, word := range dictionary {
+		wordRune := []rune(word)
+		if len(wordRune) != 5 {
 			return false
 		}
 	}
 	return true
 }
 
+// StartGame проверяет параметры и создаёт сессию с выбором ответа по seed.
 func StartGame(dictionary []string, maxAttempts int, seed int64) (GameSession, error) {
-	if len(dictionary) == 0 {
-		return GameSession{}, ErrorDictionaryIsEmpty
+	if !IsDictionary(dictionary) {
+		return GameSession{}, ErrorInvalidDictionary
 	}
 	if maxAttempts <= 0 {
 		return GameSession{}, ErrorMaxAttemptsNotEqual
 	}
-	for _, word := range dictionary {
-		wordRune := []rune(word)
-		if len(wordRune) != 5 {
-			return GameSession{}, ErrorWordNotFiveLetters
-		}
-		if !IsRussianWord(string(wordRune)) {
-			return GameSession{}, ErrorWordIsNotRussian
-		}
+	if !IsFiveLetterWord(dictionary) {
+		return GameSession{}, ErrorWordNotFiveLetters
+	}
+	if !IsRussianWord(dictionary) {
+		return GameSession{}, ErrorWordIsNotRussian
 	}
 
 	dictionaryCopy := make([]string, len(dictionary))
