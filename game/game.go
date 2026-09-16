@@ -1,6 +1,10 @@
 package game
 
-import "math/rand"
+import (
+	"math/rand"
+	"strings"
+	"unicode"
+)
 
 // StatusGame описывает статус игровой сессии.
 type StatusGame int
@@ -26,9 +30,7 @@ type GameSession struct { //nolint:revive // имя задано публичн�
 func IsRussianWord(dictionary []string) bool {
 	for _, word := range dictionary {
 		for _, ch := range word {
-			if (ch < 'а' || ch > 'я') &&
-				(ch < 'А' || ch > 'Я') &&
-				ch != 'ё' && ch != 'Ё' {
+			if !unicode.Is(unicode.Cyrillic, ch) {
 				return false
 			}
 		}
@@ -38,13 +40,13 @@ func IsRussianWord(dictionary []string) bool {
 
 // IsDictionary проверяет, что словарь непустой и не содержит повторов.
 func IsDictionary(dictionary []string) bool {
-	unique := make(map[string]bool)
+	unique := make(map[string]struct{})
 
 	for _, word := range dictionary {
-		if unique[word] {
+		if _, ok := unique[word]; ok {
 			return false
 		}
-		unique[word] = true
+		unique[word] = struct{}{}
 	}
 
 	return len(unique) > 0
@@ -77,7 +79,9 @@ func StartGame(dictionary []string, maxAttempts int, seed int64) (GameSession, e
 	}
 
 	dictionaryCopy := make([]string, len(dictionary))
-	copy(dictionaryCopy, dictionary)
+	for i, word := range dictionary {
+		dictionaryCopy[i] = strings.ToLower(word)
+	}
 
 	return GameSession{
 		Dictionary:   dictionaryCopy,

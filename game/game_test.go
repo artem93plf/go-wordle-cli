@@ -1,11 +1,11 @@
-package game
+package game_test
 
 import (
 	"errors"
+	"fiveletters/game"
 	"slices"
 	"strconv"
 	"testing"
-	"unicode/utf8"
 )
 
 func makeValidDictionary() []string {
@@ -28,14 +28,14 @@ func makeValidDictionary() []string {
 
 func TestDefaultDictionary(t *testing.T) {
 	unique := make(map[string]bool)
-	for _, word := range DefaultDictionary() {
+	for _, word := range game.DefaultDictionary() {
 		if unique[word] {
 			t.Errorf("слово %q повторяется в словаре", word)
 		}
 		unique[word] = true
 
 		t.Run(word, func(t *testing.T) {
-			if got := utf8.RuneCountInString(word); got != 5 {
+			if got := len([]rune(word)); got != 5 {
 				t.Errorf("в слове %q %d букв, ожидалось 5", word, got)
 			}
 			for _, letter := range word {
@@ -86,7 +86,7 @@ func TestIsDictionary(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := IsDictionary(test.dictionary)
+			got := game.IsDictionary(test.dictionary)
 
 			if got != test.want {
 				t.Errorf("IsDictionary() = %v, want %v", got, test.want)
@@ -125,7 +125,7 @@ func TestIsFiveLetterWord(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := IsFiveLetterWord(test.dictionary)
+			got := game.IsFiveLetterWord(test.dictionary)
 
 			if got != test.want {
 				t.Errorf("IsFiveLetterWord() = %v, want %v", got, test.want)
@@ -174,7 +174,7 @@ func TestIsRussianWord(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got := IsRussianWord(test.dictionary)
+			got := game.IsRussianWord(test.dictionary)
 
 			if got != test.want {
 				t.Errorf("IsRussianWord() = %v, want %v", got, test.want)
@@ -206,55 +206,55 @@ func TestStartGameErrors(t *testing.T) {
 			name:        "nil словарь",
 			dictionary:  nil,
 			maxAttempts: 6,
-			wantErr:     ErrorInvalidDictionary,
+			wantErr:     game.ErrorInvalidDictionary,
 		},
 		{
 			name:        "50 уникальных слов и дубликат",
 			dictionary:  withDuplicate,
 			maxAttempts: 6,
-			wantErr:     ErrorInvalidDictionary,
+			wantErr:     game.ErrorInvalidDictionary,
 		},
 		{
 			name:        "пустой словарь",
 			dictionary:  []string{},
 			maxAttempts: 6,
-			wantErr:     ErrorInvalidDictionary,
+			wantErr:     game.ErrorInvalidDictionary,
 		},
 		{
 			name:        "количество попыток равно нулю",
 			dictionary:  valid,
 			maxAttempts: 0,
-			wantErr:     ErrorMaxAttemptsNotEqual,
+			wantErr:     game.ErrorMaxAttemptsNotEqual,
 		},
 		{
 			name:        "количество попыток отрицательное",
 			dictionary:  valid,
 			maxAttempts: -1,
-			wantErr:     ErrorMaxAttemptsNotEqual,
+			wantErr:     game.ErrorMaxAttemptsNotEqual,
 		},
 		{
 			name:        "слово содержит не пять букв",
 			dictionary:  wrongLength,
 			maxAttempts: 6,
-			wantErr:     ErrorWordNotFiveLetters,
+			wantErr:     game.ErrorWordNotFiveLetters,
 		},
 		{
 			name:        "слово содержит цифру",
 			dictionary:  withDigit,
 			maxAttempts: 6,
-			wantErr:     ErrorWordIsNotRussian,
+			wantErr:     game.ErrorWordIsNotRussian,
 		},
 		{
 			name:        "слово содержит специальный символ",
 			dictionary:  withSpecialCharacter,
 			maxAttempts: 6,
-			wantErr:     ErrorWordIsNotRussian,
+			wantErr:     game.ErrorWordIsNotRussian,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := StartGame(
+			_, err := game.StartGame(
 				test.dictionary,
 				test.maxAttempts,
 				42,
@@ -294,7 +294,7 @@ func TestStartGameSameSeedSameAnswer(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			firstGame, err := StartGame(dictionary, 6, test.seed)
+			firstGame, err := game.StartGame(dictionary, 6, test.seed)
 			if err != nil {
 				t.Fatalf(
 					"первый вызов StartGame() вернул ошибку: %v",
@@ -302,7 +302,7 @@ func TestStartGameSameSeedSameAnswer(t *testing.T) {
 				)
 			}
 
-			secondGame, err := StartGame(dictionary, 6, test.seed)
+			secondGame, err := game.StartGame(dictionary, 6, test.seed)
 			if err != nil {
 				t.Fatalf(
 					"второй вызов StartGame() вернул ошибку: %v",
@@ -325,7 +325,7 @@ func TestStartGameSameSeedSameAnswer(t *testing.T) {
 func TestStartGameInitialState(t *testing.T) {
 	dictionary := makeValidDictionary()
 
-	game, err := StartGame(dictionary, 6, 42)
+	session, err := game.StartGame(dictionary, 6, 42)
 	if err != nil {
 		t.Fatalf(
 			"StartGame() вернул неожиданную ошибку: %v",
@@ -334,47 +334,47 @@ func TestStartGameInitialState(t *testing.T) {
 	}
 
 	t.Run("максимальное количество попыток установлено", func(t *testing.T) {
-		if game.MaxAttempts != 6 {
+		if session.MaxAttempts != 6 {
 			t.Errorf(
 				"MaxAttempts = %d, ожидалось 6",
-				game.MaxAttempts,
+				session.MaxAttempts,
 			)
 		}
 	})
 
 	t.Run("использованные попытки равны нулю", func(t *testing.T) {
-		if game.UsedAttempts != 0 {
+		if session.UsedAttempts != 0 {
 			t.Errorf(
 				"UsedAttempts = %d, ожидалось 0",
-				game.UsedAttempts,
+				session.UsedAttempts,
 			)
 		}
 	})
 
 	t.Run("история игры пустая", func(t *testing.T) {
-		if len(game.History) != 0 {
+		if len(session.History) != 0 {
 			t.Errorf(
 				"длина History = %d, ожидалось 0",
-				len(game.History),
+				len(session.History),
 			)
 		}
 	})
 
 	t.Run("игра находится в процессе", func(t *testing.T) {
-		if game.Status != StatusGameInProgress {
+		if session.Status != game.StatusGameInProgress {
 			t.Errorf(
 				"Status = %v, ожидалось %v",
-				game.Status,
-				StatusGameInProgress,
+				session.Status,
+				game.StatusGameInProgress,
 			)
 		}
 	})
 
 	t.Run("загаданное слово находится в словаре", func(t *testing.T) {
-		if !slices.Contains(dictionary, game.Answer) {
+		if !slices.Contains(dictionary, session.Answer) {
 			t.Errorf(
 				"загаданное слово %q отсутствует в словаре",
-				game.Answer,
+				session.Answer,
 			)
 		}
 	})
@@ -392,7 +392,7 @@ func TestStartGamePositiveMaxAttempts(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			game, err := StartGame(makeValidDictionary(), test.maxAttempts, 42)
+			game, err := game.StartGame(makeValidDictionary(), test.maxAttempts, 42)
 			if err != nil {
 				t.Fatalf("StartGame() вернул неожиданную ошибку: %v", err)
 			}
@@ -406,7 +406,7 @@ func TestStartGamePositiveMaxAttempts(t *testing.T) {
 func TestStartGameCopiesDictionary(t *testing.T) {
 	dictionary := makeValidDictionary()
 
-	game, err := StartGame(dictionary, 6, 42)
+	game, err := game.StartGame(dictionary, 6, 42)
 	if err != nil {
 		t.Fatalf(
 			"StartGame() вернул неожиданную ошибку: %v",
@@ -438,7 +438,7 @@ func TestStartGameSmallDictionary(t *testing.T) {
 	for _, size := range []int{1, 2, 49} {
 		t.Run(strconv.Itoa(size), func(t *testing.T) {
 			dictionary := valid[:size]
-			session, err := StartGame(dictionary, 6, 42)
+			session, err := game.StartGame(dictionary, 6, 42)
 			if err != nil {
 				t.Fatalf("StartGame() вернул неожиданную ошибку: %v", err)
 			}
