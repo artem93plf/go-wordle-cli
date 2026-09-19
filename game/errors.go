@@ -13,4 +13,8 @@ var (
 	ErrorWordNotFiveLetters = errors.New("word is not 5 letters long")
 	// ErrorWordIsNotRussian означает, что слово содержит нерусские символы.
 	ErrorWordIsNotRussian = errors.New("word is not Russian")
+	// ErrorWordNotInDictionary означает, что попытки нет в словаре игры.
+	ErrorWordNotInDictionary = errors.New("word is not in dictionary")
+	// ErrorGameFinished означает, что попытка сделана после завершения игры.
+	ErrorGameFinished = errors.New("game is already finished")
 )

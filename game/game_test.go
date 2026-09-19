@@ -3,6 +3,7 @@ package game_test
 import (
 	"errors"
 	"fiveletters/game"
+	"reflect"
 	"slices"
 	"strconv"
 	"testing"
@@ -446,5 +447,261 @@ func TestStartGameSmallDictionary(t *testing.T) {
 				t.Errorf("ответ %q отсутствует в переданном словаре", session.Answer)
 			}
 		})
+	}
+}
+
+func TestApplyGuessMarks(t *testing.T) {
+	dictionary := []string{
+		"отбор",
+		"около",
+	}
+
+	session, err := game.StartGame(dictionary, 6, 0)
+	if err != nil {
+		t.Fatalf("StartGame() error = %v", err)
+	}
+
+	session.Answer = "отбор"
+
+	result, err := game.ApplyGuess(&session, "около")
+	if err != nil {
+		t.Fatalf("ApplyGuess() error = %v", err)
+	}
+
+	want := []game.LetterMark{
+		game.MarkCorrect,
+		game.MarkAbsent,
+		game.MarkPresent,
+		game.MarkAbsent,
+		game.MarkAbsent,
+	}
+
+	if !reflect.DeepEqual(result.Marks, want) {
+		t.Errorf("ApplyGuess() marks = %v, want %v", result.Marks, want)
+	}
+}
+
+func TestApplyGuessInvalidGuessDoesNotChangeSession(t *testing.T) {
+	tests := []struct {
+		name    string
+		guess   string
+		wantErr error
+	}{
+		{
+			name:    "слишком короткое слово",
+			guess:   "кот",
+			wantErr: game.ErrorWordNotFiveLetters,
+		},
+		{
+			name:    "слово содержит цифры",
+			guess:   "кот12",
+			wantErr: game.ErrorWordIsNotRussian,
+		},
+		{
+			name:    "слово содержит специальные символы",
+			guess:   "кот!а",
+			wantErr: game.ErrorWordIsNotRussian,
+		},
+		{
+			name:    "слова нет в словаре",
+			guess:   "банан",
+			wantErr: game.ErrorWordNotInDictionary,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dictionary := []string{
+				"отбор",
+				"около",
+				"арбуз",
+			}
+
+			session, err := game.StartGame(dictionary, 6, 0)
+			if err != nil {
+				t.Fatalf("StartGame() error = %v", err)
+			}
+
+			usedAttemptsBefore := session.UsedAttempts
+			historyBefore := append([]string{}, session.History...)
+			statusBefore := session.Status
+
+			_, err = game.ApplyGuess(&session, tt.guess)
+			if !errors.Is(err, tt.wantErr) {
+				t.Errorf("ApplyGuess() error = %v, want %v", err, tt.wantErr)
+			}
+
+			if session.UsedAttempts != usedAttemptsBefore {
+				t.Errorf(
+					"UsedAttempts changed: got %d, want %d",
+					session.UsedAttempts,
+					usedAttemptsBefore,
+				)
+			}
+
+			if !reflect.DeepEqual(session.History, historyBefore) {
+				t.Errorf(
+					"History changed: got %v, want %v",
+					session.History,
+					historyBefore,
+				)
+			}
+
+			if session.Status != statusBefore {
+				t.Errorf(
+					"Status changed: got %v, want %v",
+					session.Status,
+					statusBefore,
+				)
+			}
+		})
+	}
+}
+
+func TestApplyGuessWinAndCaseInsensitive(t *testing.T) {
+	dictionary := []string{
+		"отбор",
+		"около",
+	}
+
+	session, err := game.StartGame(dictionary, 6, 0)
+	if err != nil {
+		t.Fatalf("StartGame() error = %v", err)
+	}
+
+	session.Answer = "отбор"
+
+	result, err := game.ApplyGuess(&session, "ОТБОР")
+	if err != nil {
+		t.Fatalf("ApplyGuess() error = %v", err)
+	}
+
+	if session.Status != game.StatusGameWin {
+		t.Errorf("Status = %v, want %v", session.Status, game.StatusGameWin)
+	}
+
+	if session.UsedAttempts != 1 {
+		t.Errorf("UsedAttempts = %d, want 1", session.UsedAttempts)
+	}
+
+	if len(session.History) != 1 || session.History[0] != "отбор" {
+		t.Errorf("History = %v, want [отбор]", session.History)
+	}
+
+	wantMarks := []game.LetterMark{
+		game.MarkCorrect,
+		game.MarkCorrect,
+		game.MarkCorrect,
+		game.MarkCorrect,
+		game.MarkCorrect,
+	}
+
+	if !reflect.DeepEqual(result.Marks, wantMarks) {
+		t.Errorf("Marks = %v, want %v", result.Marks, wantMarks)
+	}
+}
+
+func TestApplyGuessLose(t *testing.T) {
+	dictionary := []string{
+		"отбор",
+		"около",
+		"арбуз",
+	}
+
+	session, err := game.StartGame(dictionary, 2, 0)
+	if err != nil {
+		t.Fatalf("StartGame() error = %v", err)
+	}
+
+	session.Answer = "отбор"
+
+	_, err = game.ApplyGuess(&session, "около")
+	if err != nil {
+		t.Fatalf("первая попытка: ApplyGuess() error = %v", err)
+	}
+
+	if session.Status != game.StatusGameInProgress {
+		t.Errorf(
+			"после первой попытки Status = %v, want %v",
+			session.Status,
+			game.StatusGameInProgress,
+		)
+	}
+
+	_, err = game.ApplyGuess(&session, "арбуз")
+	if err != nil {
+		t.Fatalf("вторая попытка: ApplyGuess() error = %v", err)
+	}
+
+	if session.Status != game.StatusGameLose {
+		t.Errorf(
+			"Status = %v, want %v",
+			session.Status,
+			game.StatusGameLose,
+		)
+	}
+
+	if session.UsedAttempts != 2 {
+		t.Errorf("UsedAttempts = %d, want 2", session.UsedAttempts)
+	}
+
+	if len(session.History) != 2 {
+		t.Errorf("len(History) = %d, want 2", len(session.History))
+	}
+}
+
+func TestApplyGuessLoseAfterSixAttempts(t *testing.T) {
+	dictionary := []string{
+		"отбор",
+		"около",
+	}
+
+	session, err := game.StartGame(dictionary, 6, 0)
+	if err != nil {
+		t.Fatalf("StartGame() error = %v", err)
+	}
+
+	session.Answer = "отбор"
+
+	for i := range 6 {
+		_, err = game.ApplyGuess(&session, "около")
+		if err != nil {
+			t.Fatalf("попытка %d: ApplyGuess() error = %v", i+1, err)
+		}
+	}
+
+	if session.Status != game.StatusGameLose {
+		t.Errorf(
+			"Status = %v, want %v",
+			session.Status,
+			game.StatusGameLose,
+		)
+	}
+
+	if session.UsedAttempts != 6 {
+		t.Errorf("UsedAttempts = %d, want 6", session.UsedAttempts)
+	}
+
+	if len(session.History) != 6 {
+		t.Errorf("len(History) = %d, want 6", len(session.History))
+	}
+}
+
+func TestApplyGuessFinishedGame(t *testing.T) {
+	session := game.GameSession{
+		Dictionary:  []string{"отбор", "около"},
+		MaxAttempts: 6,
+		Answer:      "отбор",
+		Status:      game.StatusGameWin,
+	}
+
+	_, err := game.ApplyGuess(&session, "около")
+
+	if !errors.Is(err, game.ErrorGameFinished) {
+		t.Errorf(
+			"ApplyGuess() error = %v, want %v",
+			err,
+			game.ErrorGameFinished,
+		)
 	}
 }

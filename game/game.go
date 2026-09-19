@@ -2,12 +2,23 @@ package game
 
 import (
 	"math/rand"
+	"slices"
 	"strings"
 	"unicode"
 )
 
 // StatusGame описывает статус игровой сессии.
 type StatusGame int
+
+// LetterMark описывает результат проверки буквы.
+type LetterMark string
+
+// Возможные результаты проверки буквы.
+const (
+	MarkCorrect LetterMark = "✅"
+	MarkPresent LetterMark = "🟡"
+	MarkAbsent  LetterMark = "❌"
+)
 
 // Возможные статусы игры: игра продолжается, победа и поражение.
 const (
@@ -24,6 +35,12 @@ type GameSession struct { //nolint:revive // имя задано публичн�
 	UsedAttempts int
 	History      []string
 	Status       StatusGame
+}
+
+// GuessResult хранит результат проверки буквы.
+type GuessResult struct {
+	Guess string
+	Marks []LetterMark
 }
 
 // IsRussianWord проверяет, что слова содержат только русские буквы.
@@ -90,5 +107,67 @@ func StartGame(dictionary []string, maxAttempts int, seed int64) (GameSession, e
 		UsedAttempts: 0,
 		History:      []string{},
 		Status:       StatusGameInProgress,
+	}, nil
+}
+
+// ApplyGuess проверяет букву и отмечает ее в сессии.
+func ApplyGuess(session *GameSession, guess string) (GuessResult, error) {
+	if session.Status != StatusGameInProgress {
+		return GuessResult{}, ErrorGameFinished
+	}
+
+	guess = strings.ToLower(guess)
+
+	if !IsFiveLetterWord([]string{guess}) {
+		return GuessResult{}, ErrorWordNotFiveLetters
+	}
+	if !IsRussianWord([]string{guess}) {
+		return GuessResult{}, ErrorWordIsNotRussian
+	}
+
+	if !slices.Contains(session.Dictionary, guess) {
+		return GuessResult{}, ErrorWordNotInDictionary
+	}
+
+	answerRune := []rune(session.Answer)
+	guessRune := []rune(guess)
+
+	marks := make([]LetterMark, len(answerRune))
+	used := make([]bool, len(answerRune))
+
+	for i := range guessRune {
+		if guessRune[i] == answerRune[i] {
+			marks[i] = MarkCorrect
+			used[i] = true
+		}
+	}
+	for i := range guessRune {
+		if marks[i] == MarkCorrect {
+			continue
+		}
+
+		marks[i] = MarkAbsent
+
+		for j := range answerRune {
+			if !used[j] && guessRune[i] == answerRune[j] {
+				marks[i] = MarkPresent
+				used[j] = true
+				break
+			}
+		}
+	}
+
+	session.UsedAttempts++
+	session.History = append(session.History, guess)
+
+	if guess == session.Answer {
+		session.Status = StatusGameWin
+	} else if session.UsedAttempts >= session.MaxAttempts {
+		session.Status = StatusGameLose
+	}
+
+	return GuessResult{
+		Guess: guess,
+		Marks: marks,
 	}, nil
 }
