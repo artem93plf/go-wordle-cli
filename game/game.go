@@ -49,7 +49,6 @@ func IsRussianStr(word string) bool {
 		if !unicode.Is(unicode.Cyrillic, ch) {
 			return false
 		}
-
 	}
 	return true
 }
@@ -60,7 +59,6 @@ func IsRussianWord(dictionary []string) bool {
 		if !IsRussianStr(word) {
 			return false
 		}
-
 	}
 	return true
 }
@@ -75,10 +73,10 @@ func IsDictionary(dictionary []string) bool {
 		}
 		unique[word] = struct{}{}
 	}
-
 	return len(unique) > 0
 }
 
+// IsFiveLetterStr проверяет, что строка содержит ровно пять рун.
 func IsFiveLetterStr(word string) bool {
 	wordRune := []rune(word)
 	return len(wordRune) == 5
