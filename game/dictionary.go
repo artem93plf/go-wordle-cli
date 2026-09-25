@@ -56,3 +56,86 @@ func DefaultDictionary() []string {
 		"ягода",
 	}
 }
+
+// DictionaryByOptions возвращает словарь для заданных параметров.
+func DictionaryByOptions(category Category, difficulty Difficulty) []string {
+	switch category {
+	case CategoryAnimal:
+		switch difficulty {
+		case DifficultyEasy:
+			return []string{
+				"кошка",
+				"кабан",
+				"зебра",
+				"панда",
+				"выдра",
+				"хомяк",
+				"белка",
+				"бизон",
+			}
+		case DifficultyHard:
+			return []string{
+				"дятел",
+				"коала",
+				"гиена",
+				"лемур",
+				"сайга",
+				"варан",
+				"динго",
+			}
+		}
+
+	case CategoryCity:
+		switch difficulty {
+		case DifficultyEasy:
+			return []string{
+				"томск",
+				"париж",
+				"токио",
+				"пермь",
+				"курск",
+				"минск",
+				"псков",
+				"киров",
+			}
+		case DifficultyHard:
+			return []string{
+				"киото",
+				"дакка",
+				"аккра",
+				"дакар",
+				"лхаса",
+				"салех",
+				"табук",
+			}
+		}
+
+	case CategoryFood:
+		switch difficulty {
+		case DifficultyEasy:
+			return []string{
+				"банан",
+				"сахар",
+				"пицца",
+				"арбуз",
+				"булка",
+				"лимон",
+				"сырок",
+				"салат",
+			}
+		case DifficultyHard:
+			return []string{
+				"паста",
+				"пирог",
+				"рамен",
+				"кимчи",
+				"карри",
+				"такос",
+				"цукат",
+				"кешью",
+			}
+		}
+	}
+
+	return nil
+}

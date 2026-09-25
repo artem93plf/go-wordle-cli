@@ -9,6 +9,19 @@ import (
 	"strings"
 )
 
+// Colors описывает цвета вывода в консоль.
+const (
+	colorGreen string = "\033[32m"
+	colorRed   string = "\033[31m"
+	colorReset string = "\033[0m"
+)
+
+// Statistics хранит статистику игры.
+type Statistics struct {
+	Wins   int
+	Losses int
+}
+
 // printLine выводит строку в поток вывода.
 func printLine(output io.Writer, text string) error {
 	_, err := fmt.Fprintln(output, text)
@@ -26,8 +39,24 @@ func marksToString(marks []game.LetterMark) string {
 }
 
 // playGame проигрывает игру с последовательным вводом слов.
-func playGame(scanner *bufio.Scanner, output io.Writer, seed int64) error {
-	session, err := game.StartGame(game.DefaultDictionary(), 6, seed)
+func playGame(scanner *bufio.Scanner, output io.Writer, seed int64, statistic *Statistics) error {
+	category, err := chooseCategory(scanner, output)
+	if err != nil {
+		return err
+	}
+	if category == game.CategoryUnknown {
+		return nil
+	}
+	difficulty, err := chooseDifficulty(scanner, output)
+	if err != nil {
+		return err
+	}
+	if difficulty == game.DifficultyUnknown {
+		return nil
+	}
+	dictionary := game.DictionaryByOptions(category, difficulty)
+
+	session, err := game.StartGame(dictionary, 6, seed)
 	if err != nil {
 		return err
 	}
@@ -77,7 +106,7 @@ func playGame(scanner *bufio.Scanner, output io.Writer, seed int64) error {
 			if err := printLine(
 				output,
 				fmt.Sprintf(
-					"Победа! Слово угадано за %d попытки",
+					colorGreen+"Победа! Слово угадано за %d попытки"+colorReset,
 					session.UsedAttempts,
 				),
 			); err != nil {
@@ -90,7 +119,7 @@ func playGame(scanner *bufio.Scanner, output io.Writer, seed int64) error {
 			if err := printLine(
 				output,
 				fmt.Sprintf(
-					"Неудача. Загаданное слово: %s",
+					colorRed+"Неудача. Загаданное слово: %s"+colorReset,
 					session.Answer,
 				),
 			); err != nil {
@@ -98,13 +127,70 @@ func playGame(scanner *bufio.Scanner, output io.Writer, seed int64) error {
 			}
 		}
 	}
-
+	if session.Status == game.StatusGameWin {
+		statistic.Wins++
+	}
+	if session.Status == game.StatusGameLose {
+		statistic.Losses++
+	}
 	return nil
+}
+
+// chooseCategory предлагает выбрать категорию из списка.
+func chooseCategory(scanner *bufio.Scanner, output io.Writer) (game.Category, error) {
+	for {
+		if err := printLine(output, "Выберите категорию:\n 1. Животные\n 2. Города\n 3. Едa"); err != nil {
+			return game.CategoryUnknown, err
+		}
+		if !scanner.Scan() {
+			return game.CategoryUnknown, scanner.Err()
+		}
+
+		switch scanner.Text() {
+		case "1":
+			return game.CategoryAnimal, nil
+		case "2":
+			return game.CategoryCity, nil
+		case "3":
+			return game.CategoryFood, nil
+		default:
+			if err := printLine(output, "Неверный выбор"); err != nil {
+				return game.CategoryUnknown, err
+			}
+		}
+	}
+}
+
+func chooseDifficulty(scanner *bufio.Scanner, output io.Writer) (game.Difficulty, error) {
+	for {
+		if err := printLine(output, "Выберите сложность:\n 1. Лёгкая\n 2. Сложная"); err != nil {
+			return game.DifficultyUnknown, err
+		}
+		if !scanner.Scan() {
+			return game.DifficultyUnknown, scanner.Err()
+		}
+
+		switch scanner.Text() {
+		case "1":
+			return game.DifficultyEasy, nil
+		case "2":
+			return game.DifficultyHard, nil
+		default:
+			if err := printLine(output, "Неверный выбор"); err != nil {
+				return game.DifficultyUnknown, err
+			}
+		}
+	}
 }
 
 // Run запускает консольный интерфейс игры.
 func Run(input io.Reader, output io.Writer, seed int64) error {
 	scanner := bufio.NewScanner(input)
+
+	statistic := Statistics{
+		Wins:   0,
+		Losses: 0,
+	}
 
 	for {
 		if err := printLine(output, "1. Новая игра"); err != nil {
@@ -113,25 +199,39 @@ func Run(input io.Reader, output io.Writer, seed int64) error {
 		if err := printLine(output, "2. Выход"); err != nil {
 			return err
 		}
+		if err := printLine(output, "3. Статистика"); err != nil {
+			return err
+		}
 		if err := printLine(output, "Выберите опцию:"); err != nil {
 			return err
 		}
-
 		if !scanner.Scan() {
 			return scanner.Err()
 		}
 
 		switch scanner.Text() {
 		case "1":
-			if err := playGame(scanner, output, seed); err != nil {
+			if err := playGame(scanner, output, seed, &statistic); err != nil {
 				return err
 			}
 		case "2":
 			if err := printLine(output, "Выход"); err != nil {
 				return err
 			}
-
 			return nil
+		case "3":
+			if err := printLine(output, "Статистика:"); err != nil {
+				return err
+			}
+			if err := printLine(output, fmt.Sprintf("Побед: %d", statistic.Wins)); err != nil {
+				return err
+			}
+			if err := printLine(output, fmt.Sprintf("Поражений: %d", statistic.Losses)); err != nil {
+				return err
+			}
+			if err := printLine(output, fmt.Sprintf("Всего игр: %d", statistic.Wins+statistic.Losses)); err != nil {
+				return err
+			}
 		default:
 			if err := printLine(output, "Неверный выбор"); err != nil {
 				return err

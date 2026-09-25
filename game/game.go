@@ -13,6 +13,27 @@ type StatusGame int
 // LetterMark описывает результат проверки буквы.
 type LetterMark string
 
+// Category описывает категорию слова.
+type Category int
+
+// Difficulty описывает сложность игры.
+type Difficulty int
+
+// Возможные сложности игры.
+const (
+	DifficultyEasy Difficulty = iota
+	DifficultyHard
+	DifficultyUnknown = -1
+)
+
+// Возможные категории слов.
+const (
+	CategoryAnimal Category = iota
+	CategoryCity
+	CategoryFood
+	CategoryUnknown = -1
+)
+
 // Возможные результаты проверки буквы.
 const (
 	MarkCorrect LetterMark = "✅"
