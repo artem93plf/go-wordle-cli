@@ -1,22 +1,22 @@
-// Package main implements the Five Letters console game.
+// Package main реализует точку входа приложения «5 букв».
 package main
 
-// GameSession represents the state of one game.
-// type GameSession struct{}
+import (
+	"fiveletters/cli"
+	"flag"
+	"fmt"
+	"os"
+)
 
-// GuessResult represents the result of one accepted guess.
-// type GuessResult struct{}
+func main() {
+	seed := flag.Int64("seed", 42, "seed для выбора загаданного слова")
+	flag.Parse()
 
-// StartGame creates a new game session.
-// func StartGame(dictionary []string, maxAttempts int, seed int64) (GameSession, error) {
-// 	_, _, _ = dictionary, maxAttempts, seed
-// 	panic("not implemented")
-// }
+	if err := cli.Run(os.Stdin, os.Stdout, *seed); err != nil {
+		if _, printErr := fmt.Fprintln(os.Stderr, err); printErr != nil {
+			os.Exit(1)
+		}
 
-// ApplyGuess validates and applies a guess to the session.
-// func ApplyGuess(session *GameSession, guess string) (GuessResult, error) {
-// 	_, _ = session, guess
-// 	panic("not implemented")
-// }
-
-func main() {}
+		os.Exit(1)
+	}
+}
