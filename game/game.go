@@ -43,14 +43,24 @@ type GuessResult struct {
 	Marks []LetterMark
 }
 
+// IsRussianStr проверяет, что строка содержит только русские буквы.
+func IsRussianStr(word string) bool {
+	for _, ch := range word {
+		if !unicode.Is(unicode.Cyrillic, ch) {
+			return false
+		}
+
+	}
+	return true
+}
+
 // IsRussianWord проверяет, что слова содержат только русские буквы.
 func IsRussianWord(dictionary []string) bool {
 	for _, word := range dictionary {
-		for _, ch := range word {
-			if !unicode.Is(unicode.Cyrillic, ch) {
-				return false
-			}
+		if !IsRussianStr(word) {
+			return false
 		}
+
 	}
 	return true
 }
@@ -69,11 +79,15 @@ func IsDictionary(dictionary []string) bool {
 	return len(unique) > 0
 }
 
+func IsFiveLetterStr(word string) bool {
+	wordRune := []rune(word)
+	return len(wordRune) == 5
+}
+
 // IsFiveLetterWord проверяет, что каждое слово содержит ровно пять рун.
 func IsFiveLetterWord(dictionary []string) bool {
 	for _, word := range dictionary {
-		wordRune := []rune(word)
-		if len(wordRune) != 5 {
+		if !IsFiveLetterStr(word) {
 			return false
 		}
 	}
@@ -118,10 +132,10 @@ func ApplyGuess(session *GameSession, guess string) (GuessResult, error) {
 
 	guess = strings.ToLower(guess)
 
-	if !IsFiveLetterWord([]string{guess}) {
+	if !IsFiveLetterStr(guess) {
 		return GuessResult{}, ErrorWordNotFiveLetters
 	}
-	if !IsRussianWord([]string{guess}) {
+	if !IsRussianStr(guess) {
 		return GuessResult{}, ErrorWordIsNotRussian
 	}
 
